@@ -195,6 +195,14 @@ impl SpeedArg {
 
 #[derive(Subcommand, Debug)]
 enum RoleCommand {
+    /// Show or configure ordered model preferences for a role.
+    Models {
+        handle: String,
+        #[arg(long = "prefer")]
+        models: Vec<String>,
+        #[arg(long, conflicts_with = "models")]
+        clear: bool,
+    },
     /// List reusable roles.
     List,
     /// Show a role by handle.
@@ -441,6 +449,12 @@ enum ChatCommand {
 
 #[derive(Subcommand, Debug)]
 enum SessionCommand {
+    /// Show configured alternatives, or explicitly choose one for a stopped session.
+    Models {
+        session: String,
+        #[arg(long)]
+        choose: Option<String>,
+    },
     /// List recent direct-chat sessions.
     List,
     /// Show one session with its live agent status.
@@ -631,6 +645,7 @@ fn output_view(command: &Command) -> output::View {
             ProjectCommand::Delete { .. } => View::Confirmation("Deleted project"),
         },
         Command::Role { command } => match command {
+            RoleCommand::Models { .. } => View::Generic,
             RoleCommand::List => View::RoleList,
             RoleCommand::Show { .. } | RoleCommand::Create { .. } | RoleCommand::Update { .. } => {
                 View::Role
@@ -667,6 +682,7 @@ fn output_view(command: &Command) -> output::View {
         },
         Command::Chat { .. } => View::Confirmation("Started session"),
         Command::Session { command } => match command {
+            SessionCommand::Models { .. } => View::Generic,
             SessionCommand::List => View::SessionList,
             SessionCommand::Show { .. } => View::SessionShow,
             SessionCommand::Stop { .. } => View::Confirmation("Stopped session"),
@@ -1287,6 +1303,23 @@ async fn run_project(
 
 async fn run_role(client: &impl Caller, command: &RoleCommand) -> Result<ToolResponse, CliError> {
     match command {
+        RoleCommand::Models {
+            handle,
+            models,
+            clear,
+        } => {
+            let role = resolve_role(client, handle).await?;
+            if models.is_empty() && !clear {
+                call(client, "role_models_get", json!({"role_id": role.id})).await
+            } else {
+                call(
+                    client,
+                    "role_models_set",
+                    json!({"role_id": role.id, "models":models}),
+                )
+                .await
+            }
+        }
         RoleCommand::List => call(client, "role_list", json!({})).await,
         RoleCommand::Show { handle } => {
             let role = resolve_role(client, handle).await?;
@@ -2035,6 +2068,27 @@ async fn run_session(
     command: &SessionCommand,
 ) -> Result<ToolResponse, CliError> {
     match command {
+        SessionCommand::Models { session, choose } => {
+            let session_id = resolve_session(client, session).await?;
+            match choose {
+                Some(model) => {
+                    call(
+                        client,
+                        "session_choose_model",
+                        json!({"session_id": session_id, "model":model}),
+                    )
+                    .await
+                }
+                None => {
+                    call(
+                        client,
+                        "session_model_choices",
+                        json!({"session_id":session_id}),
+                    )
+                    .await
+                }
+            }
+        }
         SessionCommand::List => call(client, "session_list", json!({})).await,
         SessionCommand::Show { session }
         | SessionCommand::Stop { session }
