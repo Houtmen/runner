@@ -1761,3 +1761,40 @@ fn migration_0026_converts_all_launches_before_0027_drops_columns() {
         .unwrap()
         .is_some());
 }
+
+#[test]
+fn migration_0028_preserves_legacy_roles_and_has_cascading_preferences() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+    run_migrations_up_to(&mut conn, 27).unwrap();
+    insert_role(&conn, "legacy-role", "legacy").unwrap();
+    conn.execute(
+        "UPDATE roles SET model='legacy-model' WHERE id='legacy-role'",
+        [],
+    )
+    .unwrap();
+    run_migrations(&mut conn).unwrap();
+    let model: String = conn
+        .query_row(
+            "SELECT model FROM roles WHERE id='legacy-role'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(model, "legacy-model");
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM role_model_preferences", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(count, 0);
+    conn.execute("INSERT INTO role_model_preferences VALUES ('legacy-role','codex','[\"legacy-model\",\"alternative\"]')", []).unwrap();
+    conn.execute("DELETE FROM roles WHERE id='legacy-role'", [])
+        .unwrap();
+    let count: i64 = conn
+        .query_row("SELECT count(*) FROM role_model_preferences", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(count, 0);
+}

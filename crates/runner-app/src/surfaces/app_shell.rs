@@ -185,7 +185,11 @@ fn reset_label(
 
 fn unavailable_line(reason: Option<UnavailableReason>, runtime: Runtime) -> &'static str {
     match reason {
-        Some(UnavailableReason::SignIn) => "Sign in to Claude Code to see usage.",
+        Some(UnavailableReason::SignIn) => match runtime {
+            Runtime::Codex => "Sign in to Codex in Runner's Codex home to see usage.",
+            Runtime::Antigravity => "Sign in to Antigravity CLI to see usage.",
+            _ => "Sign in to Claude Code to see usage.",
+        },
         Some(UnavailableReason::KeychainDenied) => {
             "Runner was not allowed to read Claude Code's sign-in from the Keychain."
         }
@@ -194,6 +198,11 @@ fn unavailable_line(reason: Option<UnavailableReason>, runtime: Runtime) -> &'st
         }
         Some(UnavailableReason::ClaudeUnreachable) => "Couldn't reach Anthropic.",
         Some(UnavailableReason::CodexNoAnswer) => "Codex didn't answer.",
+        Some(UnavailableReason::CodexLaunchFailed) => "Couldn't start the Codex usage helper. Check the Codex executable in Settings → Agents.",
+        Some(UnavailableReason::CodexInitializeFailed) => "Codex couldn't initialize its usage connection.",
+        Some(UnavailableReason::CodexAccountFailed) => "Codex couldn't read the account in Runner's Codex home.",
+        Some(UnavailableReason::CodexRateLimitsFailed) => "Codex couldn't read the account's usage limits.",
+        Some(UnavailableReason::CodexTimedOut) => "The Codex usage request timed out. Try Refresh.",
         Some(UnavailableReason::AntigravityNoAnswer) => "Antigravity CLI didn't answer.",
         Some(UnavailableReason::InvalidResponse) => {
             crate::runtime_ui::runtime_ui(runtime).usage_invalid
@@ -3352,6 +3361,11 @@ fn usage_ui_catalog_golden() {
         Some(UnavailableReason::KeychainUnavailable),
         Some(UnavailableReason::ClaudeUnreachable),
         Some(UnavailableReason::CodexNoAnswer),
+        Some(UnavailableReason::CodexLaunchFailed),
+        Some(UnavailableReason::CodexInitializeFailed),
+        Some(UnavailableReason::CodexAccountFailed),
+        Some(UnavailableReason::CodexRateLimitsFailed),
+        Some(UnavailableReason::CodexTimedOut),
         Some(UnavailableReason::AntigravityNoAnswer),
         Some(UnavailableReason::InvalidResponse),
     ];

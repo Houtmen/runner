@@ -614,6 +614,7 @@ impl SessionState {
 }
 
 pub struct SessionManager {
+    admission: Arc<super::admission::SessionLimit>,
     /// Per-session state. The outer map lock protects membership only;
     /// each session's hot mutable state lives behind its own mutex so
     /// PTY output for one busy session does not block lifecycle work on
@@ -783,7 +784,13 @@ impl SessionManager {
         discovery_state: crate::runtime_status::SharedDiscoveryState,
         runtime: Arc<dyn SessionRuntime>,
     ) -> Arc<Self> {
+        let admission = Arc::new(super::admission::SessionLimit::default());
+        let runtime = Arc::new(super::admission::LimitedRuntime::new(
+            runtime,
+            Arc::clone(&admission),
+        ));
         Arc::new(Self {
+            admission,
             sessions: Mutex::new(HashMap::new()),
             delivery_listeners: Mutex::new(HashMap::new()),
             shell_env,
@@ -804,6 +811,22 @@ impl SessionManager {
 
     pub fn set_mission_permission_mode(&self, mode: router::runtime::MissionPermissionMode) {
         *self.mission_permission_mode.write().unwrap() = mode;
+    }
+
+    pub fn set_session_limit(&self, maximum: Option<usize>) -> Result<()> {
+        self.admission.configure(maximum).map_err(Into::into)
+    }
+
+    pub fn session_limit_info(&self) -> runner_core::protocol::SessionLimitInfo {
+        self.admission.info()
+    }
+
+    pub(crate) fn save_session_limit(
+        &self,
+        maximum: Option<usize>,
+        persist: impl FnOnce() -> Result<()>,
+    ) -> Result<()> {
+        self.admission.configure_with(maximum, persist)
     }
 
     pub fn mission_permission_mode(&self) -> router::runtime::MissionPermissionMode {

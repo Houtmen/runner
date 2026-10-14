@@ -382,6 +382,15 @@ pub async fn mission_signal_impl(
         let conn = state.db.get()?;
         let mission = get(&conn, &input.mission_id)?;
         validate_roster_handle(&conn, &state.app_data_dir, &mission, input.from.as_deref())?;
+        if input.signal_type == "repair_requested" {
+            if let Some(target) = input
+                .payload
+                .get("target")
+                .and_then(|target| target.as_str())
+            {
+                validate_roster_handle(&conn, &state.app_data_dir, &mission, Some(target))?;
+            }
+        }
         let from = if let Some(from) = input.from.as_deref() {
             let Some(signal_type) = KnownSignalType::from_name(&input.signal_type) else {
                 return Err(Error::msg(format!(
@@ -395,6 +404,7 @@ pub async fn mission_signal_impl(
                     | KnownSignalType::HumanResponse
                     | KnownSignalType::HumanQuestion
                     | KnownSignalType::MissionGoal
+                    | KnownSignalType::ReviewPolicy
             ) {
                 return Err(Error::msg(format!(
                     "signal_type {:?} is reserved for the person or Runner",
@@ -403,7 +413,10 @@ pub async fn mission_signal_impl(
             }
             from.to_owned()
         } else {
-            if !matches!(input.signal_type.as_str(), "human_said" | "human_response") {
+            if !matches!(
+                input.signal_type.as_str(),
+                "human_said" | "human_response" | "review_policy"
+            ) {
                 return Err(Error::msg(format!(
                     "signal_type {:?} is not allowed without --as <handle>",
                     input.signal_type

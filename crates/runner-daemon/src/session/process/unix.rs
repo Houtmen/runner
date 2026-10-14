@@ -139,7 +139,50 @@ fn live_descendants(pid: i32) -> Vec<i32> {
     found
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "linux")]
+fn live_descendants(pid: i32) -> Vec<i32> {
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return Vec::new();
+    };
+    let mut children = std::collections::BTreeMap::<i32, Vec<i32>>::new();
+    for entry in entries.flatten() {
+        let Some(child) = entry
+            .file_name()
+            .to_str()
+            .and_then(|name| name.parse::<i32>().ok())
+        else {
+            continue;
+        };
+        let Ok(stat) = std::fs::read_to_string(entry.path().join("stat")) else {
+            continue;
+        };
+        if let Some((state, parent)) = linux_process_state(&stat) {
+            if child > 1 && !matches!(state, 'Z' | 'X') {
+                children.entry(parent).or_default().push(child);
+            }
+        }
+    }
+    let mut found = Vec::new();
+    let mut frontier = vec![pid];
+    while let Some(parent) = frontier.pop() {
+        for &child in children.get(&parent).into_iter().flatten() {
+            if child != pid && !found.contains(&child) {
+                found.push(child);
+                frontier.push(child);
+            }
+        }
+    }
+    found
+}
+
+#[cfg(target_os = "linux")]
+fn linux_process_state(stat: &str) -> Option<(char, i32)> {
+    // The command field can contain spaces and parentheses.
+    let mut fields = stat.rsplit_once(')')?.1.split_whitespace();
+    Some((fields.next()?.chars().next()?, fields.next()?.parse().ok()?))
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn live_descendants(_pid: i32) -> Vec<i32> {
     Vec::new()
 }
@@ -191,8 +234,41 @@ pub(crate) fn process_exists(pid: i32) -> bool {
     if pid <= 1 {
         return false;
     }
+    #[cfg(target_os = "linux")]
+    if let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+        if linux_process_state(&stat).is_some_and(|(state, _)| matches!(state, 'Z' | 'X')) {
+            return false;
+        }
+    }
     let result = unsafe { libc::kill(pid, 0) };
     result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod linux_tests {
+    use super::*;
+
+    #[test]
+    fn process_stat_handles_parentheses_in_command_names() {
+        assert_eq!(
+            linux_process_state("42 (a ) tricky (name)) S 7 0 0"),
+            Some(('S', 7))
+        );
+        assert_eq!(linux_process_state("42 (dead) Z 1 0 0"), Some(('Z', 1)));
+        assert_eq!(linux_process_state("invalid"), None);
+    }
+
+    #[test]
+    fn unreaped_child_is_not_a_live_process() {
+        let mut child = std::process::Command::new("/bin/sh")
+            .args(["-c", "exit 0"])
+            .spawn()
+            .unwrap();
+        let pid = child.id() as i32;
+        let exited = wait_for_process_exit_until(pid, Instant::now() + Duration::from_secs(5));
+        let _ = child.wait();
+        assert!(exited, "an unreaped zombie must not count as live");
+    }
 }
 
 #[cfg(target_os = "macos")]

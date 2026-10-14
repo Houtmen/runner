@@ -15,7 +15,7 @@ use runner_core::app_paths::home_dir as capture_home;
 #[cfg(not(test))]
 use std::env::var_os as capture_var_os;
 
-fn capture_sessions_root(
+fn resolved_home(
     env: &std::collections::BTreeMap<String, String>,
     cwd: Option<&Path>,
 ) -> Option<PathBuf> {
@@ -36,7 +36,14 @@ fn capture_sessions_root(
             .or_else(|| std::env::current_dir().ok())?
             .join(home)
     };
-    Some(home.join("sessions"))
+    Some(home)
+}
+
+fn capture_sessions_root(
+    env: &std::collections::BTreeMap<String, String>,
+    cwd: Option<&Path>,
+) -> Option<PathBuf> {
+    resolved_home(env, cwd).map(|home| home.join("sessions"))
 }
 
 pub(crate) fn inject_codex_hooks(args: &[String], windows: bool) -> bool {
@@ -204,6 +211,21 @@ impl RuntimeAdapter for Codex {
         hook_server
     }
 
+    fn seed_trust_for_spawn(&self, spec: &SpawnSpec) -> crate::error::Result<()> {
+        #[cfg(not(test))]
+        {
+            let home = resolved_home(&spec.env, spec.cwd.as_deref())
+                .ok_or_else(|| crate::error::Error::msg("Codex home is not available"))?;
+            codex_trust::seed_spawn_trust(spec.cwd.as_deref(), &home)
+        }
+        #[cfg(test)]
+        {
+            // Mock SessionManager tests must not mutate the operator's config.
+            let _ = spec;
+            Ok(())
+        }
+    }
+
     fn catalog(&self) -> Option<RuntimeCatalog> {
         runner_core::protocol::runtime_metadata::codex::catalog()
     }
@@ -300,7 +322,10 @@ pub(crate) const CODEX_CONFIG_RELATIVE_PATH: &str = ".codex/config.toml";
 pub(crate) const CODEX_TERMINAL_TITLE: &str =
     r#"tui.terminal_title=["activity","thread-title","project-name"]"#;
 pub(crate) fn config_path(home: &Path) -> PathBuf {
-    home.join(CODEX_CONFIG_RELATIVE_PATH)
+    capture_var_os("CODEX_HOME")
+        .filter(|value| !value.is_empty())
+        .map(|path| PathBuf::from(path).join("config.toml"))
+        .unwrap_or_else(|| home.join(CODEX_CONFIG_RELATIVE_PATH))
 }
 
 static DISCOVERY: ModelDiscoverySource = ModelDiscoverySource {

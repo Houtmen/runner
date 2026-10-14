@@ -218,6 +218,20 @@ pub fn call_daemon(
         ));
     }
     match name {
+        "role_models_get" => {
+            response(client.role_models_get(&argument::<String>(&args, "role_id")?))
+        }
+        "role_models_set" => response(client.role_models_set(
+            &argument::<String>(&args, "role_id")?,
+            argument(&args, "models")?,
+        )),
+        "session_model_choices" => {
+            response(client.session_model_choices(&argument::<String>(&args, "session_id")?))
+        }
+        "session_choose_model" => response(client.session_choose_model(
+            &argument::<String>(&args, "session_id")?,
+            &argument::<String>(&args, "model")?,
+        )),
         "crew_list" => response(client.crew_list_all()),
         "crew_get" => response(client.crew_get(&argument::<String>(&args, "id")?)),
         "crew_create" => response(client.crew_create(parse(args)?)),
@@ -313,6 +327,10 @@ pub fn call_daemon(
             response(client.mission_rename_impl(argument(&args, "id")?, argument(&args, "title")?))
         }
         "session_list" => response(client.session_list_with_activity()),
+        "session_sync_model" => response(client.session_sync_model(
+            &argument::<String>(&args, "session_id")?,
+            argument(&args, "transcript")?,
+        )),
         "session_get" => {
             response(client.session_get_with_status(&argument::<String>(&args, "session_id")?))
         }

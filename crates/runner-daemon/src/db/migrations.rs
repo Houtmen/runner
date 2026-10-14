@@ -151,6 +151,10 @@ pub(super) const MIGRATIONS: &[(i64, &str)] = &[
         27,
         include_str!("../../migrations/0027_drop_unused_session_columns.sql"),
     ),
+    (
+        28,
+        include_str!("../../migrations/0028_role_model_preferences.sql"),
+    ),
 ];
 
 pub(super) fn run_migrations(conn: &mut Connection) -> Result<()> {

@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use crate::model::{CodexSpeed, LaunchDefinition, Role, Runtime};
 
 pub(crate) fn from_effective(role: &Role) -> LaunchDefinition {
-    LaunchDefinition {
+    let mut definition = LaunchDefinition {
         command: role.command.clone(),
         args: role.args.clone(),
         env: role
@@ -15,7 +15,19 @@ pub(crate) fn from_effective(role: &Role) -> LaunchDefinition {
         effort: role.effort.clone(),
         codex_speed: role.codex_speed,
         system_prompt: role.system_prompt.clone(),
+    };
+    if role.runtime == "codex" && !definition.env.contains_key("CODEX_HOME") {
+        #[cfg(test)]
+        let home = crate::golden::config_var_os("CODEX_HOME");
+        #[cfg(not(test))]
+        let home = std::env::var_os("CODEX_HOME");
+        if let Some(home) = home.filter(|home| !home.is_empty()) {
+            definition
+                .env
+                .insert("CODEX_HOME".into(), home.to_string_lossy().into_owned());
+        }
     }
+    definition
 }
 
 pub(crate) fn to_role(definition: &LaunchDefinition, runtime: &str, mut identity: Role) -> Role {
@@ -66,4 +78,42 @@ pub(crate) fn convert_legacy(
     }
     effective.codex_speed = speed.or(effective.codex_speed);
     Ok((effective.runtime.clone(), from_effective(&effective)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn codex_home_is_pinned_for_resume_without_overwriting_role_home() {
+        let mut role = runtime_direct_role("codex", None, None, None).unwrap();
+        crate::golden::with_config_env(
+            std::collections::BTreeMap::from([(
+                "CODEX_HOME",
+                std::ffi::OsString::from("/isolated/one"),
+            )]),
+            || {
+                let definition = from_effective(&role);
+                assert_eq!(definition.env.get("CODEX_HOME").unwrap(), "/isolated/one");
+                crate::golden::with_config_env(
+                    std::collections::BTreeMap::from([(
+                        "CODEX_HOME",
+                        std::ffi::OsString::from("/isolated/two"),
+                    )]),
+                    || {
+                        let resumed = to_role(&definition, "codex", role.clone());
+                        assert_eq!(
+                            from_effective(&resumed).env.get("CODEX_HOME").unwrap(),
+                            "/isolated/one"
+                        );
+                    },
+                );
+                role.env.insert("CODEX_HOME".into(), "/role/home".into());
+                assert_eq!(
+                    from_effective(&role).env.get("CODEX_HOME").unwrap(),
+                    "/role/home"
+                );
+            },
+        );
+    }
 }

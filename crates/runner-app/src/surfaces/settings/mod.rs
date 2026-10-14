@@ -1,4 +1,5 @@
 pub(crate) mod about;
+pub(crate) mod agent_controls;
 pub(crate) mod agents;
 pub(crate) mod archived;
 pub(crate) mod diagnostics;

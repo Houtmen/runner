@@ -16,13 +16,16 @@ mod mission_lifecycle;
 mod mission_roles;
 #[cfg(unix)]
 mod mission_roster;
+mod model_preferences;
 mod opencode;
+mod orchestration_acceptance;
 mod permissions;
 mod pi;
 mod replay;
 mod resume;
 mod runtime_direct;
 mod runtime_override;
+mod session_limit;
 mod slot_restart;
 mod spawn_env;
 mod status;

@@ -64,6 +64,16 @@ pub fn boot(
         Arc::clone(&runtime_discovery),
         runtime,
     );
+    if let Some(maximum) = ops::orchestration::saved_session_limit(&pool)? {
+        sessions.set_session_limit(maximum)?;
+    } else if let Some(value) = std::env::var_os("RUNNER_MAX_SESSIONS") {
+        let maximum = value
+            .to_str()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .context("RUNNER_MAX_SESSIONS must be a positive integer")?;
+        sessions.set_session_limit(Some(maximum))?;
+    }
     let window_registry = Arc::new(windows::WindowRegistry::new());
     let event_channel = events::EventChannel::new();
 
