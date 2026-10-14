@@ -2164,7 +2164,9 @@ impl SessionManager {
                     role.env.get("COPILOT_HOME").map(String::as_str),
                 );
                 let materialize_started_at = Instant::now();
-                let fork_key = match run_headless_fork(&spec, &headless, FORK_MATERIALIZE_TIMEOUT) {
+                let fork_key = match self.admission.acquire().map_err(Error::from).and_then(
+                    |_permit| run_headless_fork(&spec, &headless, FORK_MATERIALIZE_TIMEOUT),
+                ) {
                     Ok(key) => key,
                     Err(error) => {
                         log::info!(
