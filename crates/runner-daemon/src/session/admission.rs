@@ -8,6 +8,7 @@ use super::runtime::{
 
 #[derive(Default)]
 pub(crate) struct SessionLimit {
+    configuration: Mutex<()>,
     state: Mutex<LimitState>,
 }
 
@@ -18,10 +19,35 @@ struct LimitState {
 }
 
 impl SessionLimit {
+    pub(crate) fn info(&self) -> runner_core::protocol::SessionLimitInfo {
+        let state = self.state.lock().unwrap();
+        runner_core::protocol::SessionLimitInfo {
+            maximum: state.maximum,
+            active: state.active,
+        }
+    }
+
+    pub(crate) fn configure_with(
+        &self,
+        maximum: Option<usize>,
+        persist: impl FnOnce() -> crate::error::Result<()>,
+    ) -> crate::error::Result<()> {
+        if maximum == Some(0) {
+            return Err(crate::error::Error::msg("session limit must be positive"));
+        }
+        // Serialize saves without holding the admission lock during database IO.
+        // This avoids a DB/admission lock inversion with concurrent spawns.
+        let _configuration = self.configuration.lock().unwrap();
+        persist()?;
+        self.state.lock().unwrap().maximum = maximum;
+        Ok(())
+    }
+
     pub(crate) fn configure(&self, maximum: Option<usize>) -> RuntimeResult<()> {
         if maximum == Some(0) {
             return Err(RuntimeError::Msg("session limit must be positive".into()));
         }
+        let _configuration = self.configuration.lock().unwrap();
         self.state.lock().unwrap().maximum = maximum;
         Ok(())
     }

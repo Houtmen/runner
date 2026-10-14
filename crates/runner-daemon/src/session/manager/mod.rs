@@ -817,6 +817,18 @@ impl SessionManager {
         self.admission.configure(maximum).map_err(Into::into)
     }
 
+    pub fn session_limit_info(&self) -> runner_core::protocol::SessionLimitInfo {
+        self.admission.info()
+    }
+
+    pub(crate) fn save_session_limit(
+        &self,
+        maximum: Option<usize>,
+        persist: impl FnOnce() -> Result<()>,
+    ) -> Result<()> {
+        self.admission.configure_with(maximum, persist)
+    }
+
     pub fn mission_permission_mode(&self) -> router::runtime::MissionPermissionMode {
         *self.mission_permission_mode.read().unwrap()
     }

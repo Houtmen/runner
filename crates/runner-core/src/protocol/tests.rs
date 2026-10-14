@@ -672,3 +672,28 @@ impl Sample for TerminalPalette {
         }
     }
 }
+
+record!(SessionLimitInfo { maximum, active });
+record!(OrchestrationSession {
+    id,
+    title,
+    runtime,
+    status,
+    role_id
+});
+record!(OrchestrationSnapshot {
+    limit,
+    codex_home,
+    roles,
+    sessions,
+    missions
+});
+impl Sample for crate::event_log::review::ReviewState {
+    fn sample() -> Self {
+        Self {
+            max_repairs: Some(3),
+            repairs: 1,
+            status: crate::event_log::review::ReviewStatus::Open,
+        }
+    }
+}

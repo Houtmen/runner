@@ -146,6 +146,7 @@ pub(crate) enum SettingsPane {
     Terminal,
     Shortcuts,
     Agents,
+    AgentControls,
     Skills,
     Mcp,
     Updates,
@@ -163,6 +164,7 @@ impl SettingsPane {
             Some("terminal") => Self::Terminal,
             Some("shortcuts") => Self::Shortcuts,
             Some("agents") => Self::Agents,
+            Some("agent-controls") => Self::AgentControls,
             Some("mcp") => Self::Mcp,
             Some("skills") => Self::Skills,
             Some("updates") => Self::Updates,
@@ -182,6 +184,7 @@ impl SettingsPane {
             Self::Terminal => "terminal",
             Self::Shortcuts => "shortcuts",
             Self::Agents => "agents",
+            Self::AgentControls => "agent-controls",
             Self::Skills => "skills",
             Self::Mcp => "mcp",
             Self::Updates => "updates",
@@ -200,6 +203,7 @@ impl SettingsPane {
             Self::Terminal => "Terminal",
             Self::Shortcuts => "Keyboard shortcuts",
             Self::Agents => "Agents",
+            Self::AgentControls => "Agent controls",
             Self::Skills => "Skills",
             Self::Mcp => "MCP",
             Self::Updates => "Updates",
@@ -218,6 +222,7 @@ impl SettingsPane {
             Self::Terminal => "terminal.svg",
             Self::Shortcuts => "keyboard.svg",
             Self::Agents => "bot.svg",
+            Self::AgentControls => "settings.svg",
             Self::Skills => "file-text.svg",
             Self::Mcp => "plug.svg",
             Self::Updates => "refresh-cw.svg",
@@ -239,6 +244,7 @@ const APP_PANES: &[SettingsPane] = &[
 ];
 const INTEGRATION_PANES: &[SettingsPane] = &[
     SettingsPane::Agents,
+    SettingsPane::AgentControls,
     SettingsPane::Skills,
     SettingsPane::Mcp,
 ];
@@ -312,6 +318,7 @@ pub(crate) struct SettingsState {
     file_link_editor: Entity<StyledSelect>,
     pub(crate) quit_behavior: Entity<StyledSelect>,
     agents: Option<Entity<settings::agents::AgentsPane>>,
+    agent_controls: Option<Entity<settings::agent_controls::AgentControlsPane>>,
     skills: Option<Entity<settings::skills::SkillsPane>>,
     mcp: Option<Entity<settings::mcp::McpPane>>,
     updates: Option<Entity<settings::updates::UpdatesPane>>,
@@ -505,6 +512,7 @@ impl SettingsState {
             file_link_editor,
             quit_behavior,
             agents: None,
+            agent_controls: None,
             skills: None,
             mcp: None,
             updates: None,
@@ -871,6 +879,17 @@ impl NativeRoot {
         self.settings_page.pane = pane;
         match pane {
             SettingsPane::Missions => self.refresh_settings_crews(cx),
+            SettingsPane::AgentControls => {
+                if self.settings_page.agent_controls.is_none() {
+                    let client = self.app_store.read(cx).client.clone();
+                    self.settings_page.agent_controls = Some(cx.new(|pane_cx| {
+                        settings::agent_controls::AgentControlsPane::new(client, pane_cx)
+                    }));
+                }
+                if let Some(controls) = self.settings_page.agent_controls.clone() {
+                    controls.update(cx, |pane, pane_cx| pane.refresh(pane_cx));
+                }
+            }
             SettingsPane::Agents => {
                 if self.settings_page.agents.is_none() {
                     let shell = cx.entity().downgrade();
@@ -1457,6 +1476,11 @@ impl NativeRoot {
             SettingsPane::Notifications => Some(self.render_notifications_settings(cx)),
             SettingsPane::Terminal => Some(self.render_terminal_settings(cx)),
             SettingsPane::Shortcuts => Some(self.render_shortcuts_settings(cx)),
+            SettingsPane::AgentControls => self
+                .settings_page
+                .agent_controls
+                .clone()
+                .map(IntoElement::into_any_element),
             SettingsPane::Agents => self
                 .settings_page
                 .agents
@@ -3219,7 +3243,7 @@ mod tests {
     fn nav_search_filters_labels_and_removes_empty_groups() {
         let all = filtered_nav_groups("");
         assert_eq!(all.len(), 3);
-        assert_eq!(all.iter().map(|(_, panes)| panes.len()).sum::<usize>(), 13);
+        assert_eq!(all.iter().map(|(_, panes)| panes.len()).sum::<usize>(), 14);
         assert_eq!(
             all[0],
             (
@@ -3242,6 +3266,7 @@ mod tests {
                 "Integrations",
                 vec![
                     SettingsPane::Agents,
+                    SettingsPane::AgentControls,
                     SettingsPane::Skills,
                     SettingsPane::Mcp
                 ]
@@ -3556,6 +3581,22 @@ mod tests {
         assert_eq!(
             launch_dims_for("mission", &direct, (104, 42)),
             Some((104, 42))
+        );
+    }
+}
+
+#[cfg(test)]
+mod agent_controls_navigation_tests {
+    use super::*;
+    #[test]
+    fn controls_route_and_settings_search_find_the_new_page() {
+        assert_eq!(
+            SettingsPane::from_route(Some("agent-controls")),
+            SettingsPane::AgentControls
+        );
+        assert_eq!(
+            filtered_nav_groups("agent controls"),
+            vec![("Integrations", vec![SettingsPane::AgentControls])]
         );
     }
 }
