@@ -1074,3 +1074,66 @@ fn session_show_text_and_json_keep_launch_values_after_role_edit() {
             .contains("SECRET_878_SENTINEL"));
     }
 }
+
+#[test]
+fn model_preferences_and_explicit_choice_work_through_the_built_cli() {
+    let mut fixture = Fixture::new();
+    let native_key = "00000000-0000-4000-8000-000000000001".to_owned();
+    let pool = runner_daemon::db::open_pool(&fixture.data.join("runner.db")).unwrap();
+    pool.get()
+        .unwrap()
+        .execute(
+            "UPDATE sessions SET agent_session_key=?2 WHERE id=?1",
+            [SESSION, native_key.as_str()],
+        )
+        .unwrap();
+    fixture.start();
+    let invoke = |args: &[&str]| {
+        let output = fixture
+            .command(false)
+            .args(args)
+            .arg("--json")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()
+    };
+    let preferences = invoke(&[
+        "role",
+        "models",
+        "coder",
+        "--prefer",
+        "fixture-model",
+        "--prefer",
+        "alternative",
+    ]);
+    assert_eq!(
+        preferences["models"],
+        serde_json::json!(["fixture-model", "alternative"])
+    );
+    let choices = invoke(&["session", "models", SESSION]);
+    assert_eq!(choices["alternatives"], serde_json::json!(["alternative"]));
+    assert_eq!(choices["automatic_fallback"], false);
+    let chosen = invoke(&["session", "models", SESSION, "--choose", "alternative"]);
+    assert_eq!(chosen["current_model"], "alternative");
+    let key: String = pool
+        .get()
+        .unwrap()
+        .query_row(
+            "SELECT agent_session_key FROM sessions WHERE id=?1",
+            [SESSION],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(key, native_key);
+    let refused = fixture
+        .command(false)
+        .args(["session", "models", SESSION, "--choose", "unconfigured"])
+        .output()
+        .unwrap();
+    assert!(!refused.status.success());
+}
