@@ -18,6 +18,7 @@ mod mission_roles;
 mod mission_roster;
 mod model_preferences;
 mod opencode;
+mod orchestration_acceptance;
 mod permissions;
 mod pi;
 mod replay;
