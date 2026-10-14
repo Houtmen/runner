@@ -177,12 +177,47 @@ impl EventLog {
         Ok(event)
     }
 
-    fn append_locked(&self, file: &File, draft: EventDraft) -> Result<Event> {
+    fn append_locked(&self, file: &File, mut draft: EventDraft) -> Result<Event> {
         // Repair any dangling non-newline tail from a prior crash *before*
         // reading the last id — otherwise `last_id_in_file` would treat the
         // partial fragment as the last event and we'd both seed a bogus floor
         // and glue the new event onto it.
         Self::repair_tail(file)?;
+        if draft.kind == crate::model::EventKind::Signal
+            && draft.signal_type.as_ref().is_some_and(|kind| {
+                matches!(
+                    kind.as_str(),
+                    "review_policy" | "repair_requested" | "review_complete"
+                )
+            })
+        {
+            let mut reader = BufReader::new(file);
+            reader.seek(SeekFrom::Start(0))?;
+            let events: Vec<Event> = reader
+                .lines()
+                .map(|line| -> Result<Event> { Ok(serde_json::from_str(&line?)?) })
+                .collect::<Result<_>>()?;
+            let events: Vec<Event> = events
+                .into_iter()
+                .filter(|event| {
+                    event.mission_id == draft.mission_id && event.crew_id == draft.crew_id
+                })
+                .collect();
+            let state = super::review::ReviewState::from_events(&events)?;
+            match state.admit(&events, &mut draft)? {
+                super::review::Decision::Accept => {}
+                super::review::Decision::Duplicate(previous) => return Ok(*previous),
+                super::review::Decision::Exhausted => {
+                    draft.from = "system".into();
+                    draft.signal_type = Some(crate::model::SignalType::new("review_exhausted"));
+                    draft.payload = serde_json::json!({"max_repairs": state.max_repairs, "repairs": state.repairs, "status": "exhausted"});
+                    self.append_locked(file, draft)?;
+                    return Err(Error::msg(
+                        "review repair limit reached; review is exhausted",
+                    ));
+                }
+            }
+        }
         // Rebase floor from on-disk tail so any writer that committed while we
         // were waiting for the lock doesn't leave us with an older ULID.
         if let Some(last_id) = Self::last_id_in_file(file)? {
