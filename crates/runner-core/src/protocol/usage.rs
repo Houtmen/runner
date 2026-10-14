@@ -21,6 +21,11 @@ pub enum UnavailableReason {
     KeychainUnavailable,
     ClaudeUnreachable,
     CodexNoAnswer,
+    CodexLaunchFailed,
+    CodexInitializeFailed,
+    CodexAccountFailed,
+    CodexRateLimitsFailed,
+    CodexTimedOut,
     AntigravityNoAnswer,
     InvalidResponse,
 }

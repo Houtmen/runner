@@ -581,7 +581,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("fake-codex");
         let marker = temp.path().join("terminated");
-        let script = format!("#!/bin/sh\ntrap 'printf term > {} ; exit 0' TERM\nread line\nprintf '%s\\n' '{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{{}}}}'\nread line\nread line\nprintf '%s\\n' '{{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{{\"rateLimits\":{{\"primary\":{{\"usedPercent\":23,\"windowDurationMins\":300}}}}}}}}'\nwhile :; do sleep 1; done\n", marker.display());
+        let script = format!("#!/bin/sh\ntrap 'printf term > {} ; exit 0' TERM\nread line\nprintf '%s\\n' '{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{{}}}}'\nread line\nread line\nprintf '%s\\n' '{{\"id\":2,\"result\":{{\"account\":{{\"type\":\"chatgpt\"}}}}}}'\nread line\nprintf '%s\\n' '{{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{{\"rateLimits\":{{\"primary\":{{\"usedPercent\":23,\"windowDurationMins\":300}}}}}}}}'\nwhile :; do sleep 1; done\n", marker.display());
         std::fs::write(&path, script).unwrap();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
         let windows = fetch_codex_with_timeout(
@@ -599,7 +599,7 @@ mod tests {
                 &LoginShellEnv::default(),
                 Duration::from_millis(10)
             ),
-            Err(UnavailableReason::CodexNoAnswer)
+            Err(UnavailableReason::CodexTimedOut)
         );
     }
 
