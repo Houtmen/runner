@@ -3,6 +3,7 @@
 
 pub mod log;
 pub mod path;
+pub mod review;
 pub mod ulid;
 
 pub use log::{EventLog, LogEntry, SkipReport, TryAppendError};

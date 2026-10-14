@@ -36,6 +36,18 @@ pub fn run(env: &env::MissionEnv, ty: &str, payload: Option<&str>) -> i32 {
         }
     };
 
+    if kind == KnownSignalType::RepairRequested {
+        if let Some(target) = payload_value
+            .get("target")
+            .and_then(|target| target.as_str())
+        {
+            if !crate::roster::is_known(&env.event_log, target) {
+                eprintln!("runner signal: repair target @{target} is not in the mission roster");
+                return 2;
+            }
+        }
+    }
+
     append(env, kind.as_str(), payload_value)
 }
 
