@@ -1712,13 +1712,20 @@
                                             6,
                                             10
                                           ],
+                                          "fill": "$raised",
+                                          "stroke": "$border-strong",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "cornerRadius": 4,
                                           "descendants": {
                                             "ZU031": {
                                               "enabled": true,
-                                              "icon": "external-link"
+                                              "icon": "external-link",
+                                              "fill": "$text-1"
                                             },
                                             "wUh0u": {
-                                              "content": "Open System Settings"
+                                              "content": "Open System Settings",
+                                              "fill": "$text-1"
                                             }
                                           }
                                         }
@@ -4196,13 +4203,20 @@
                                             6,
                                             10
                                           ],
+                                          "fill": "$raised",
+                                          "stroke": "$border-strong",
+                                          "strokeWidth": 1,
+                                          "strokeAlignment": "inner",
+                                          "cornerRadius": 4,
                                           "descendants": {
                                             "ZU031": {
                                               "enabled": true,
-                                              "icon": "external-link"
+                                              "icon": "external-link",
+                                              "fill": "$text-1"
                                             },
                                             "wUh0u": {
-                                              "content": "Open System Settings"
+                                              "content": "Open System Settings",
+                                              "fill": "$text-1"
                                             }
                                           }
                                         }
@@ -5084,13 +5098,24 @@
                       "type": "ref",
                       "ref": "IelRd",
                       "name": "open system settings",
+                      "fill": "$raised",
+                      "stroke": "$border-strong",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "cornerRadius": 4,
+                      "padding": [
+                        6,
+                        10
+                      ],
                       "descendants": {
                         "ZU031": {
                           "enabled": true,
-                          "icon": "external-link"
+                          "icon": "external-link",
+                          "fill": "$text-1"
                         },
                         "wUh0u": {
-                          "content": "Open System Settings"
+                          "content": "Open System Settings",
+                          "fill": "$text-1"
                         }
                       }
                     }
@@ -5199,13 +5224,24 @@
                       "type": "ref",
                       "ref": "IelRd",
                       "name": "open system settings",
+                      "fill": "$raised",
+                      "stroke": "$border-strong",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "cornerRadius": 4,
+                      "padding": [
+                        6,
+                        10
+                      ],
                       "descendants": {
                         "ZU031": {
                           "enabled": true,
-                          "icon": "external-link"
+                          "icon": "external-link",
+                          "fill": "$text-1"
                         },
                         "wUh0u": {
-                          "content": "Open System Settings"
+                          "content": "Open System Settings",
+                          "fill": "$text-1"
                         }
                       }
                     }
@@ -5324,13 +5360,24 @@
                       "type": "ref",
                       "ref": "IelRd",
                       "name": "open system settings",
+                      "fill": "$raised",
+                      "stroke": "$border-strong",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "cornerRadius": 4,
+                      "padding": [
+                        6,
+                        10
+                      ],
                       "descendants": {
                         "ZU031": {
                           "enabled": true,
-                          "icon": "external-link"
+                          "icon": "external-link",
+                          "fill": "$text-1"
                         },
                         "wUh0u": {
-                          "content": "Open System Settings"
+                          "content": "Open System Settings",
+                          "fill": "$text-1"
                         }
                       }
                     }
@@ -5439,13 +5486,24 @@
                       "type": "ref",
                       "ref": "IelRd",
                       "name": "open system settings",
+                      "fill": "$raised",
+                      "stroke": "$border-strong",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "cornerRadius": 4,
+                      "padding": [
+                        6,
+                        10
+                      ],
                       "descendants": {
                         "ZU031": {
                           "enabled": true,
-                          "icon": "external-link"
+                          "icon": "external-link",
+                          "fill": "$text-1"
                         },
                         "wUh0u": {
-                          "content": "Open System Settings"
+                          "content": "Open System Settings",
+                          "fill": "$text-1"
                         }
                       }
                     }
@@ -5943,6 +6001,23 @@
         },
         {
           "value": "#1C1D220C",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "border-strong": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#2A2C33",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#D6D8DF",
           "theme": {
             "mode": "light"
           }

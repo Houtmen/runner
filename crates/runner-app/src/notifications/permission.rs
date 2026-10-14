@@ -15,6 +15,14 @@ pub(super) fn query() -> oneshot::Receiver<Permission> {
     platform::query()
 }
 
+/// macOS lists an app under System Settings → Notifications only once it
+/// has requested authorization, so Runner asks at launch rather than on its
+/// first notification. The system prompts once; later requests return the
+/// saved answer.
+pub(super) fn request() -> oneshot::Receiver<()> {
+    platform::request()
+}
+
 /// System Settings opens on Runner's own notification page when the link
 /// names the running app's bundle id.
 #[cfg(not(windows))]
@@ -40,9 +48,11 @@ mod platform {
 
     use block2::RcBlock;
     use futures::channel::oneshot;
-    use objc2_foundation::NSBundle;
+    use objc2::runtime::Bool;
+    use objc2_foundation::{NSBundle, NSError};
     use objc2_user_notifications::{
-        UNAuthorizationStatus, UNNotificationSettings, UNUserNotificationCenter,
+        UNAuthorizationOptions, UNAuthorizationStatus, UNNotificationSettings,
+        UNUserNotificationCenter,
     };
 
     use super::Permission;
@@ -85,6 +95,26 @@ mod platform {
             .getNotificationSettingsWithCompletionHandler(&completion);
         rx
     }
+
+    pub(super) fn request() -> oneshot::Receiver<()> {
+        let (tx, rx) = oneshot::channel();
+        if !bundled() {
+            let _ = tx.send(());
+            return rx;
+        }
+        let tx = Mutex::new(Some(tx));
+        let completion = RcBlock::new(move |_: Bool, _: *mut NSError| {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                let _ = tx.send(());
+            }
+        });
+        UNUserNotificationCenter::currentNotificationCenter()
+            .requestAuthorizationWithOptions_completionHandler(
+                UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound,
+                &completion,
+            );
+        rx
+    }
 }
 
 #[cfg(all(windows, not(test)))]
@@ -112,6 +142,13 @@ mod platform {
         let _ = tx.send(permission);
         rx
     }
+
+    // Windows has no permission prompt.
+    pub(super) fn request() -> oneshot::Receiver<()> {
+        let (tx, rx) = oneshot::channel();
+        let _ = tx.send(());
+        rx
+    }
 }
 
 #[cfg(any(test, not(any(target_os = "macos", windows))))]
@@ -123,6 +160,12 @@ mod platform {
     pub(super) fn query() -> oneshot::Receiver<Permission> {
         let (tx, rx) = oneshot::channel();
         let _ = tx.send(Permission::Unknown);
+        rx
+    }
+
+    pub(super) fn request() -> oneshot::Receiver<()> {
+        let (tx, rx) = oneshot::channel();
+        let _ = tx.send(());
         rx
     }
 

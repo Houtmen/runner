@@ -626,6 +626,7 @@ pub(crate) fn install(cx: &mut App) {
     });
     cx.set_global(GlobalNotifications(controller));
     refresh_permission(cx);
+    request_permission(cx);
     cx.on_system_notification_response(|response, cx| open(response.tag.as_ref(), cx));
 }
 
@@ -635,7 +636,8 @@ pub(crate) fn permission(cx: &App) -> Permission {
 }
 
 /// Asks the system again, since the user can change the permission in
-/// System Settings at any time. Called when a Runner window comes to the front.
+/// System Settings at any time. Called when a Runner window comes to the
+/// front, and after the launch request is answered.
 pub(crate) fn refresh_permission(cx: &mut App) {
     let Some(controller) = cx
         .try_global::<GlobalNotifications>()
@@ -658,6 +660,16 @@ pub(crate) fn refresh_permission(cx: &mut App) {
         })
         .detach();
     });
+}
+
+fn request_permission(cx: &mut App) {
+    let answered = permission::request();
+    cx.spawn(async move |cx| {
+        if answered.await.is_ok() {
+            cx.update(refresh_permission);
+        }
+    })
+    .detach();
 }
 
 pub(crate) fn view_changed(cx: &mut App) {
