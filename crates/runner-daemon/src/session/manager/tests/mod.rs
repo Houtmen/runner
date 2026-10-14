@@ -23,6 +23,7 @@ mod replay;
 mod resume;
 mod runtime_direct;
 mod runtime_override;
+mod session_limit;
 mod slot_restart;
 mod spawn_env;
 mod status;
