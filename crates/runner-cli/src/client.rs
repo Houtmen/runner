@@ -327,6 +327,10 @@ pub fn call_daemon(
             response(client.mission_rename_impl(argument(&args, "id")?, argument(&args, "title")?))
         }
         "session_list" => response(client.session_list_with_activity()),
+        "session_sync_model" => response(client.session_sync_model(
+            &argument::<String>(&args, "session_id")?,
+            argument(&args, "transcript")?,
+        )),
         "session_get" => {
             response(client.session_get_with_status(&argument::<String>(&args, "session_id")?))
         }

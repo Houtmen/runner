@@ -463,6 +463,12 @@ enum SessionCommand {
     Stop { session: String },
     /// Stop and archive a direct chat.
     Archive { session: String },
+    /// Synchronize the model from an owned native Codex rollout, without starting an agent.
+    SyncModel {
+        session: String,
+        #[arg(long)]
+        transcript: PathBuf,
+    },
     /// Resume a stopped session.
     Resume { session: String },
     /// Restart a mission session with a fresh conversation.
@@ -686,6 +692,7 @@ fn output_view(command: &Command) -> output::View {
             SessionCommand::List => View::SessionList,
             SessionCommand::Show { .. } => View::SessionShow,
             SessionCommand::Stop { .. } => View::Confirmation("Stopped session"),
+            SessionCommand::SyncModel { .. } => View::Generic,
             SessionCommand::Archive { .. } => View::Confirmation("Archived session"),
             SessionCommand::Resume { .. } => View::Confirmation("Resumed session"),
             SessionCommand::Restart { .. } => View::Confirmation("Restarted session"),
@@ -2101,6 +2108,19 @@ async fn run_session(
                 _ => unreachable!(),
             };
             call(client, tool, json!({"session_id": session_id})).await
+        }
+        SessionCommand::SyncModel {
+            session,
+            transcript,
+        } => {
+            let session_id = resolve_session(client, session).await?;
+            let transcript = absolute_path(transcript)?;
+            call(
+                client,
+                "session_sync_model",
+                json!({"session_id":session_id, "transcript":transcript}),
+            )
+            .await
         }
         SessionCommand::Resume { session } | SessionCommand::Restart { session } => {
             let id = resolve_session(client, session).await?;

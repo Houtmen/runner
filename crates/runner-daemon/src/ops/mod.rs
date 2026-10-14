@@ -38,3 +38,5 @@ pub mod window;
 mod tests;
 
 pub mod model_selection;
+
+pub mod native_model;
