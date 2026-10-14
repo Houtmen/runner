@@ -556,6 +556,7 @@ impl Router {
                 match signal.as_str() {
                     "mission_goal" => handlers::mission_goal(self, event),
                     "human_said" => handlers::human_said(self, event),
+                    "repair_requested" => handlers::human_said(self, event),
                     "ask_lead" => handlers::ask_lead(self, event),
                     "ask_human" => handlers::ask_human(self, event),
                     "human_response" => handlers::human_response(self, event),

@@ -32,6 +32,7 @@ fn every_delete_leaves_foreign_key_check_empty_on_a_real_database() {
         ("missions", "crew_id", "crews", "CASCADE"),
         ("missions", "project_id", "projects", "SET NULL"),
         ("nodes", "parent_id", "nodes", "RESTRICT"),
+        ("role_model_preferences", "role_id", "roles", "CASCADE"),
         ("session_attention", "session_id", "sessions", "CASCADE"),
         ("sessions", "mission_id", "missions", "SET NULL"),
         ("sessions", "project_id", "projects", "SET NULL"),
@@ -48,6 +49,7 @@ fn every_delete_leaves_foreign_key_check_empty_on_a_real_database() {
 
     insert_test_role(&conn, "r-doomed", "doomed", "shell", "sh");
     insert_test_role(&conn, "r-kept", "kept", "shell", "sh");
+    conn.execute("INSERT INTO role_model_preferences VALUES ('r-doomed','shell','[\"primary\",\"alternative\"]'), ('r-kept','shell','[\"kept\"]')", []).unwrap();
     let project = crate::repo::project::create(&conn, "P", "/tmp/p").unwrap();
     crate::repo::node::ensure_project_node(&conn, &project.id).unwrap();
     conn.execute_batch(&format!(
@@ -146,6 +148,20 @@ fn every_delete_leaves_foreign_key_check_empty_on_a_real_database() {
     check("role", crate::ops::role::role_delete(&core, "r-doomed"));
 
     let conn = core.db.get().unwrap();
+    assert_eq!(
+        row_count(
+            &conn,
+            "SELECT COUNT(*) FROM role_model_preferences WHERE role_id='r-doomed'"
+        ),
+        0
+    );
+    assert_eq!(
+        row_count(
+            &conn,
+            "SELECT COUNT(*) FROM role_model_preferences WHERE role_id='r-kept'"
+        ),
+        1
+    );
     let survivors: Vec<String> = conn
         .prepare("SELECT id FROM sessions ORDER BY id")
         .unwrap()

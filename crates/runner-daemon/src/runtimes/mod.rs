@@ -356,6 +356,13 @@ pub trait RuntimeAdapter: Send + Sync {
     ) -> crate::error::Result<()> {
         Ok(())
     }
+    fn seed_trust_for_spawn(&self, spec: &SpawnSpec) -> crate::error::Result<()> {
+        self.seed_trust(
+            &spec.session_id,
+            spec.cwd.as_deref(),
+            spec.env.get("COPILOT_HOME").map(String::as_str),
+        )
+    }
     fn key_capture(&self) -> KeyCapture {
         KeyCapture::None
     }

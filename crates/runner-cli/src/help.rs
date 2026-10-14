@@ -14,11 +14,11 @@ USAGE
   runner status
   runner daemon status|stop
   runner project list|show|create|rename|delete
-  runner role list|show|create|update|delete
+  runner role list|show|create|update|delete|models
   runner crew list|show|create|update|delete|add|set|remove|lead|order
   runner mission list|show|start|stop|resume|archive|unarchive|rename|pin|unpin|move|feed|answer
   runner chat start
-  runner session list|show|stop|archive|resume|restart
+  runner session list|show|stop|archive|resume|restart|models
   runner msg post|read
   runner signal <type>
   runner ask <question> | runner ask --human <prompt> --choices <a,b,...>
