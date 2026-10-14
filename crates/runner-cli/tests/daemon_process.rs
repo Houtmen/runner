@@ -1030,6 +1030,16 @@ fn slow_sqlite_request_does_not_block_another_request() {
 
 #[cfg(unix)]
 fn process_exists(pid: u32) -> bool {
+    #[cfg(target_os = "linux")]
+    if let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+        if stat
+            .rsplit_once(')')
+            .and_then(|(_, fields)| fields.split_whitespace().next())
+            .is_some_and(|state| matches!(state, "Z" | "X"))
+        {
+            return false;
+        }
+    }
     unsafe { libc::kill(pid as i32, 0) == 0 }
 }
 #[cfg(windows)]
