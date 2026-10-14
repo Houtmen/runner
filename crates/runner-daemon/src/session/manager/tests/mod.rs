@@ -16,6 +16,7 @@ mod mission_lifecycle;
 mod mission_roles;
 #[cfg(unix)]
 mod mission_roster;
+mod model_preferences;
 mod opencode;
 mod permissions;
 mod pi;
