@@ -110,7 +110,8 @@ jobs:
         run: cargo nextest run --locked --workspace --no-fail-fast --cargo-profile ci --timings
 
       - name: Build Runner for resource verification
-        run: cargo build --locked -p runner-app -p runner-cli --profile ci --timings
+        # Embed GPUI shaders; keep Runner workspace debug assertions/dev data.
+        run: cargo build --locked -p runner-app -p runner-cli --profile ci --config 'profile.ci.package.gpui-pre-windows.debug-assertions=false' --timings
 
       - name: Verify Runner manifest and icon
         shell: pwsh
@@ -148,6 +149,10 @@ jobs:
       - name: Package Windows development acceptance build
         shell: pwsh
         run: ./script/windows/package-acceptance.ps1
+
+      - name: Verify portable Windows application startup
+        shell: pwsh
+        run: ./script/windows/test-acceptance.ps1
 
       - name: Upload Windows development acceptance build
         uses: actions/upload-artifact@v4

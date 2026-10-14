@@ -41,3 +41,20 @@ actual behavior, and sanitized logs. Keep failed, skipped and unrun checks
 separate. Do not call the native workflow ready until those checks pass.
 For a provider change, create a new chat using a reviewed handoff file and retain
 its source session as the original history; do not claim native session transfer.
+
+## Portable shader startup regression
+
+GPUI Windows 0.3.7 debug builds compile HLSL at startup from their build-time
+Cargo source directory. Shipping that binary alone fails in DirectWriteTextSystem
+on a different computer. The packaging build uses the existing ci profile with
+`--config 'profile.ci.package.gpui-pre-windows.debug-assertions=false'` so GPUI's
+build script compiles and embeds its shaders. Runner workspace crates retain
+debug assertions and the separate development database; no dependency is patched.
+
+`script/windows/test-acceptance.ps1` checks package hashes, relocates the package,
+temporarily hides both build-time HLSL files, and requires a native application
+window plus a successful packaged-CLI daemon-status request and development
+database. Its isolated environment uses unique test pipes and no live agents.
+It restores shader files/environment and stops its own application and daemon.
+Artifact upload follows this check, preventing the original incomplete package
+from being offered again.

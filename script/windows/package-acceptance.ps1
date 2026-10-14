@@ -39,7 +39,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify acceptance commit' }
 @"
 Runner Windows x64 development acceptance build
 Commit: $sha
-Profile: ci (development data; not an official signed release)
+Profile: ci with GPUI embedded shaders (development data; not an official signed release)
 
 Keep all files together. Start Start-Runner-Test.cmd on Windows 11 Intel/AMD x64.
 The launcher sets CODEX_HOME to %LOCALAPPDATA%\RunnerForkTest\codex and limits
