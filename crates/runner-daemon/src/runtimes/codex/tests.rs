@@ -2,6 +2,67 @@ use super::*;
 use crate::runtimes::test_support::*;
 
 #[test]
+fn spawn_trust_and_hooks_write_only_the_selected_codex_home() {
+    let root = tempfile::tempdir().unwrap();
+    let standard_home = root.path().join("home");
+    let project = root.path().join("project");
+    std::fs::create_dir_all(project.join(".git")).unwrap();
+    std::fs::create_dir_all(standard_home.join(".codex")).unwrap();
+    let original = "# operator config\nmodel = \"operator-model\"\n";
+    std::fs::write(standard_home.join(".codex/config.toml"), original).unwrap();
+    let selected = root.path().join("isolated");
+    with_conversation_home(&standard_home, || {
+        crate::golden::with_config_env(Default::default(), || {
+            let env = std::collections::BTreeMap::from([(
+                "CODEX_HOME".into(),
+                selected.to_string_lossy().into_owned(),
+            )]);
+            let home = resolved_home(&env, Some(&project)).unwrap();
+            codex_trust::seed_spawn_trust(Some(&project), &home).unwrap();
+            codex_trust::seed_spawn_trust(Some(&project), &home).unwrap();
+            let text = std::fs::read_to_string(home.join("config.toml")).unwrap();
+            let doc: toml_edit::DocumentMut = text.parse().unwrap();
+            assert_eq!(
+                doc["projects"][std::fs::canonicalize(&project).unwrap().to_str().unwrap()]
+                    ["trust_level"]
+                    .as_str(),
+                Some("trusted")
+            );
+            assert_eq!(
+                doc["mcp_servers"]["runner_hooks"]["enabled"].as_bool(),
+                Some(false)
+            );
+            assert_eq!(
+                capture_sessions_root(&env, Some(&project)),
+                Some(selected.join("sessions"))
+            );
+            assert_eq!(
+                std::fs::read_to_string(standard_home.join(".codex/config.toml")).unwrap(),
+                original
+            );
+        });
+    });
+}
+
+#[test]
+fn native_defaults_honor_configured_home_and_keep_default_compatibility() {
+    let root = tempfile::tempdir().unwrap();
+    let selected = root.path().join("selected");
+    crate::golden::with_config_env(
+        std::collections::BTreeMap::from([("CODEX_HOME", selected.as_os_str().to_owned())]),
+        || {
+            assert_eq!(config_path(root.path()), selected.join("config.toml"));
+        },
+    );
+    crate::golden::with_config_env(Default::default(), || {
+        assert_eq!(
+            config_path(root.path()),
+            root.path().join(".codex/config.toml")
+        );
+    });
+}
+
+#[test]
 fn rollout_capture_resolves_spawn_home_then_runner_home_then_default() {
     let root = tempfile::tempdir().unwrap();
     let cwd = root.path().join("project");

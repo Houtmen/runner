@@ -415,21 +415,9 @@ impl SessionManager {
         *last = Some(Instant::now());
     }
 
-    fn seed_runtime_project_trust(
-        &self,
-        session_id: &str,
-        runtime_key: &str,
-        cwd: Option<&Path>,
-        copilot_home: Option<&str>,
-    ) {
-        let result =
-            crate::runtimes::for_key(runtime_key).seed_trust(session_id, cwd, copilot_home);
-        if let (Err(e), Some(cwd)) = (result, cwd) {
-            log::warn!(
-                "failed to seed {:?} project trust: session={session_id} cwd={} error={e}",
-                Runtime::parse(runtime_key),
-                cwd.display()
-            );
+    fn seed_runtime_project_trust(&self, runtime_key: &str, spec: &SpawnSpec) {
+        if let Err(error) = crate::runtimes::for_key(runtime_key).seed_trust_for_spawn(spec) {
+            log::warn!("failed to seed runtime project trust: runtime={runtime_key} session={} error={error}", spec.session_id);
         }
     }
 
@@ -1052,12 +1040,7 @@ impl SessionManager {
             }
         }
         let initial_size = spec.initial_size;
-        self.seed_runtime_project_trust(
-            &session_id,
-            &role.runtime,
-            spec.cwd.as_deref(),
-            role.env.get("COPILOT_HOME").map(String::as_str),
-        );
+        self.seed_runtime_project_trust(&role.runtime, &spec);
         let capture_root =
             match crate::runtimes::for_key(&role.runtime).key_capture_for_spawn(&spec) {
                 crate::runtimes::KeyCapture::RolloutScan { sessions_root } => sessions_root,
@@ -1637,12 +1620,7 @@ impl SessionManager {
         let spawn_started_at_dt = Utc::now();
         #[cfg(windows)]
         let first_turn_deadline = Instant::now() + WINDOWS_FIRST_TURN_TIMEOUT;
-        self.seed_runtime_project_trust(
-            &session_id,
-            &role.runtime,
-            spec.cwd.as_deref(),
-            role.env.get("COPILOT_HOME").map(String::as_str),
-        );
+        self.seed_runtime_project_trust(&role.runtime, &spec);
         let capture_root =
             match crate::runtimes::for_key(&role.runtime).key_capture_for_spawn(&spec) {
                 crate::runtimes::KeyCapture::RolloutScan { sessions_root } => sessions_root,
@@ -2157,12 +2135,7 @@ impl SessionManager {
                 })
             }
             headless @ router::runtime::ForkPlan::Headless { .. } => {
-                self.seed_runtime_project_trust(
-                    &session_id,
-                    &role.runtime,
-                    spec.cwd.as_deref(),
-                    role.env.get("COPILOT_HOME").map(String::as_str),
-                );
+                self.seed_runtime_project_trust(&role.runtime, &spec);
                 let materialize_started_at = Instant::now();
                 let fork_key = match run_headless_fork(&spec, &headless, FORK_MATERIALIZE_TIMEOUT) {
                     Ok(key) => key,
@@ -2786,12 +2759,7 @@ impl SessionManager {
         let spawn_started_at_dt = Utc::now();
         #[cfg(windows)]
         let first_turn_deadline = Instant::now() + WINDOWS_FIRST_TURN_TIMEOUT;
-        self.seed_runtime_project_trust(
-            session_id,
-            &role.runtime,
-            spec.cwd.as_deref(),
-            role.env.get("COPILOT_HOME").map(String::as_str),
-        );
+        self.seed_runtime_project_trust(&role.runtime, &spec);
         let capture_root =
             match crate::runtimes::for_key(&role.runtime).key_capture_for_spawn(&spec) {
                 crate::runtimes::KeyCapture::RolloutScan { sessions_root } => sessions_root,
