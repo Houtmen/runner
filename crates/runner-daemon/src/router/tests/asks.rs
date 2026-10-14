@@ -206,3 +206,30 @@ fn human_response_without_matching_question_emits_mission_warning() {
         .collect();
     assert_eq!(warnings.len(), 1);
 }
+
+#[test]
+fn only_admitted_review_repairs_are_delivered() {
+    let (router, injector, log, _dir) = fixture(
+        vec![slot_with_role("lead", true), slot_with_role("impl", false)],
+        &[("lead", "S-LEAD"), ("impl", "S-IMPL")],
+    );
+    log.append(signal(
+        "human",
+        "review_policy",
+        serde_json::json!({"max_repairs":1}),
+    ))
+    .unwrap();
+    let admitted = log.append(signal("lead", "repair_requested", serde_json::json!({"text":"Fix the failing assertion", "target":"impl", "request_id":"one"}))).unwrap();
+    router.handle_event(&admitted);
+    assert!(log
+        .append(signal(
+            "lead",
+            "repair_requested",
+            serde_json::json!({"text":"Another repair", "target":"impl", "request_id":"two"})
+        ))
+        .is_err());
+    let pushes = injector.pushes_for("S-IMPL");
+    assert_eq!(pushes.len(), 1);
+    assert!(pushes[0].contains("Fix the failing assertion"));
+    assert!(injector.pushes_for("S-LEAD").is_empty());
+}

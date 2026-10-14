@@ -56,6 +56,9 @@ pub enum KnownSignalType {
     HumanResponse,
     SessionStatus,
     InboxRead,
+    ReviewPolicy,
+    RepairRequested,
+    ReviewComplete,
 }
 
 impl KnownSignalType {
@@ -68,6 +71,9 @@ impl KnownSignalType {
         KnownSignalType::HumanResponse,
         KnownSignalType::SessionStatus,
         KnownSignalType::InboxRead,
+        KnownSignalType::ReviewPolicy,
+        KnownSignalType::RepairRequested,
+        KnownSignalType::ReviewComplete,
     ];
 
     pub fn as_str(&self) -> &'static str {
@@ -80,6 +86,9 @@ impl KnownSignalType {
             KnownSignalType::HumanResponse => "human_response",
             KnownSignalType::SessionStatus => "session_status",
             KnownSignalType::InboxRead => "inbox_read",
+            KnownSignalType::ReviewPolicy => "review_policy",
+            KnownSignalType::RepairRequested => "repair_requested",
+            KnownSignalType::ReviewComplete => "review_complete",
         }
     }
 
