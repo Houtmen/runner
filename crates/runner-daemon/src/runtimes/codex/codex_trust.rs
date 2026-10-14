@@ -7,6 +7,15 @@ use crate::error::{Error, Result};
 
 static CONFIG_LOCK: Mutex<()> = Mutex::new(());
 
+pub(crate) fn seed_spawn_trust(cwd: Option<&Path>, codex_home: &Path) -> Result<()> {
+    let path = codex_home.join("config.toml");
+    seed_hook_server_at(&path)?;
+    if let Some(cwd) = cwd {
+        seed_project_trust_at_with_home(cwd, &path, runner_core::app_paths::home_dir().as_deref())?;
+    }
+    Ok(())
+}
+
 #[cfg(not(test))]
 pub(crate) fn seed_project_trust(cwd: &Path) -> Result<()> {
     let home = runner_core::app_paths::home_dir()
